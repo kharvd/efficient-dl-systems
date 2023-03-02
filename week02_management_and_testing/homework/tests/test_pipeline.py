@@ -11,7 +11,7 @@ from modeling.unet import UnetModel
 
 @pytest.fixture
 def train_dataset():
-    tf = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    tf = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))])
     dataset = CIFAR10(
         "./data",
         train=True,
@@ -23,6 +23,8 @@ def train_dataset():
 
 @pytest.mark.parametrize(["device"], [["cpu"], ["cuda"]])
 def test_train_on_one_batch(device, train_dataset):
+    torch.random.manual_seed(42)
+
     # note: you should not need to increase the threshold or change the hyperparameters
     ddpm = DiffusionModel(
         eps_model=UnetModel(3, 3, hidden_size=32),
