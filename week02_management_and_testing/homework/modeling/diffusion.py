@@ -21,7 +21,7 @@ class DiffusionModel(nn.Module):
         self.criterion = nn.MSELoss()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        timestep = torch.randint(1, self.num_timesteps + 1, (x.shape[0],))
+        timestep = torch.randint(1, self.num_timesteps + 1, (x.shape[0],), device=x.device)
         eps = torch.randn_like(x)
 
         x_t = (
