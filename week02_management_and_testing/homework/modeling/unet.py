@@ -66,7 +66,7 @@ class TimestepEmbedding(nn.Module):
         x = x.view(-1, 1)
         x = torch.sin(self.lin1(x))
         x = self.lin2(x)
-        return x
+        return x.view(-1, x.shape[1], 1, 1)
 
 
 class UnetModel(nn.Module):
