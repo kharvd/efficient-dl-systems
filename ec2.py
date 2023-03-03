@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import time
 import click
 import boto3
@@ -171,6 +172,40 @@ def ssh():
 
     # SSH into the instance
     execute_ssh(instance_ip, ["-L", "8888:localhost:8888"], check=False)
+
+
+@cli.command()
+@click.argument("from_path")
+@click.argument("to_path")
+def scp(from_path, to_path):
+    # Load the instance IP address from the file
+    instance_ip = load_instance_info()[1]
+    if instance_ip is None:
+        click.echo("No instance provisioned.")
+        return
+
+    click.echo(f"Copying {from_path} to {to_path} on instance with IP {instance_ip}.")
+
+    def normalize_path(path):
+        if path.startswith("ec2:"):
+            return f"ubuntu@{instance_ip}:{path[4:]}"
+        return os.path.abspath(path)
+
+    from_path = normalize_path(from_path)
+    to_path = normalize_path(to_path)
+
+    # Copy file to instance
+    subprocess.check_call(
+        [
+            "scp",
+            "-i",
+            key_path,
+            "-o",
+            "StrictHostKeyChecking=no",
+            from_path,
+            to_path,
+        ]
+    )
 
 
 if __name__ == "__main__":
