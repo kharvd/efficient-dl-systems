@@ -54,6 +54,10 @@ def test_training(device, tmp_path, train_dataset):
     # note: implement and test a complete training procedure (including sampling)
     torch.random.manual_seed(42)
 
+    if device == "cpu":
+        # take a small subset of the dataset to speed up the test
+        train_dataset = torch.utils.data.Subset(train_dataset, range(1000))
+
     ddpm = DiffusionModel(
         eps_model=UnetModel(3, 3, hidden_size=32),
         betas=(1e-4, 0.02),
