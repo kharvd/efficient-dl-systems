@@ -10,9 +10,16 @@ import json
 region = "us-east-1"
 ec2_client = boto3.client("ec2", region_name=region)
 
-# launch_template_id = "lt-01849062ec450a84b"  # efficient-dl
-launch_template_id = "lt-0e0b43a5b92c4d420"  # test-template-nano
-launch_template_version = "1"
+instance_templates = {
+    "nano": {
+        "template_id": "lt-0e0b43a5b92c4d420",  # test-template-nano
+        "template_version": "1",
+    },
+    "gpu": {
+        "template_id": "lt-01849062ec450a84b",  # efficient-dl
+        "template_version": "3",
+    },
+}
 
 volume_id = "vol-03e082be1ec238e52"
 key_path = "~/Dropbox/virginia.cer"
@@ -23,21 +30,12 @@ def cli():
     pass
 
 
-@cli.command()
-def up():
-    # If the instance info file exists, load the instance ID and IP address
-    instance_id, instance_ip = load_instance_info()
-    if instance_id is not None:
-        click.echo(f"Instance {instance_id} already provisioned with IP {instance_ip}.")
-        return
-
-    click.echo("Provisioning instance...")
-
+def run_instance(instance_type):
     # Launch an instance from the launch template
     response = ec2_client.run_instances(
         LaunchTemplate={
-            "LaunchTemplateId": launch_template_id,
-            "Version": launch_template_version,
+            "LaunchTemplateId": instance_templates[instance_type]["template_id"],
+            "Version": instance_templates[instance_type]["template_version"],
         },
         MaxCount=1,
         MinCount=1,
@@ -46,14 +44,34 @@ def up():
 
     # Retrieve the instance ID and public IP address
     instance_id = response["Instances"][0]["InstanceId"]
+    return instance_id
+
+
+def get_instance_ip(instance_id):
+    response = ec2_client.describe_instances(InstanceIds=[instance_id])
+    instance_ip = response["Reservations"][0]["Instances"][0]["PublicIpAddress"]
+    return instance_ip
+
+
+@cli.command()
+@click.argument("instance_type", type=click.Choice(instance_templates.keys()))
+@click.option("--volume_device", default="/dev/nvme2n1")
+def up(instance_type, volume_device):
+    # If the instance info file exists, load the instance ID and IP address
+    instance_id, instance_ip = load_instance_info()
+    if instance_id is not None:
+        click.echo(f"Instance {instance_id} already provisioned with IP {instance_ip}.")
+        return
+
+    click.echo("Provisioning instance...")
+    instance_id = run_instance(instance_type)
 
     # Wait for the instance to start running
     waiter = ec2_client.get_waiter("instance_running")
     click.echo("Waiting for instance to start running...")
     waiter.wait(InstanceIds=[instance_id])
 
-    response = ec2_client.describe_instances(InstanceIds=[instance_id])
-    instance_ip = response["Reservations"][0]["Instances"][0]["PublicIpAddress"]
+    instance_ip = get_instance_ip(instance_id)
     click.echo(f"Instance {instance_id} provisioned with IP {instance_ip}.")
 
     # Save the instance id and IP address to a file
@@ -62,12 +80,10 @@ def up():
     click.echo("Waiting for SSH to be available...")
     time.sleep(10)
 
-    attach_volume(instance_id, instance_ip)
-
-    return instance_id, instance_ip
+    attach_volume(instance_id, instance_ip, volume_device)
 
 
-def attach_volume(instance_id, instance_ip):
+def attach_volume(instance_id, instance_ip, volume_device):
     # Attach the volume
     ec2_client.attach_volume(
         Device="/dev/sdf",
@@ -82,8 +98,9 @@ def attach_volume(instance_id, instance_ip):
 
     # Mount volume
     click.echo("Mounting volume...")
-    execute_ssh(instance_ip, ["sudo", "mount", "/dev/nvme1n1", "/mnt"])
-    execute_ssh(instance_ip, ["sudo", "chown", "ubuntu", "/mnt"])
+    execute_ssh(instance_ip, ["sudo", "mkdir", "/mnt/external"])
+    execute_ssh(instance_ip, ["sudo", "chown", "ubuntu", "/mnt/external"])
+    execute_ssh(instance_ip, ["sudo", "mount", volume_device, "/mnt/external"])
 
 
 def execute_ssh(instance_ip, command, check=True):
