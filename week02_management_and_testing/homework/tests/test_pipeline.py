@@ -65,4 +65,4 @@ def test_training(device, tmp_path, train_dataset):
     dataloader = DataLoader(train_dataset, batch_size=512, shuffle=True)
 
     train_epoch(ddpm, dataloader, optim, device)
-    generate_samples(ddpm, device, tmp_path)
+    generate_samples(ddpm, device, tmp_path / "samples.png")
