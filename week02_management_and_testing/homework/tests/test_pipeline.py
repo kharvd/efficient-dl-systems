@@ -61,8 +61,8 @@ def test_training(device, tmp_path, train_dataset):
     )
     ddpm.to(device)
 
-    optim = torch.optim.Adam(ddpm.parameters(), lr=5e-4)
-    dataloader = DataLoader(train_dataset, batch_size=2048, shuffle=True)
+    optim = torch.optim.Adam(ddpm.parameters(), lr=1e-3)
+    dataloader = DataLoader(train_dataset, batch_size=512, shuffle=True)
 
     train_epoch(ddpm, dataloader, optim, device)
     generate_samples(ddpm, device, tmp_path)
