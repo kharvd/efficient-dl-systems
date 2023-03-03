@@ -7,12 +7,17 @@ from torchvision.datasets import CIFAR10
 from modeling.diffusion import DiffusionModel
 from modeling.training import train_step
 from modeling.unet import UnetModel
-from week02_management_and_testing.homework.modeling.training import generate_samples, train_epoch
+from modeling.training import generate_samples, train_epoch
 
 
 @pytest.fixture
 def train_dataset():
-    tf = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))])
+    tf = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)),
+        ]
+    )
     dataset = CIFAR10(
         "./data",
         train=True,
@@ -61,4 +66,3 @@ def test_training(device, tmp_path, train_dataset):
 
     train_epoch(ddpm, dataloader, optim, device)
     generate_samples(ddpm, device, tmp_path)
-
