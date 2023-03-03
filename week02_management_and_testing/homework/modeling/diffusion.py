@@ -37,7 +37,7 @@ class DiffusionModel(nn.Module):
         x_i = torch.randn(num_samples, *size, device=device)
 
         for i in range(self.num_timesteps, 0, -1):
-            z = torch.randn(num_samples, *size) if i > 1 else 0
+            z = torch.randn(num_samples, *size, device=device) if i > 1 else 0
             eps = self.eps_model(
                 x_i,
                 torch.tensor(i / self.num_timesteps).repeat(num_samples, 1).to(device),
